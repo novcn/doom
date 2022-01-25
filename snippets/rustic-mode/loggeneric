@@ -1,0 +1,5 @@
+# -*- coding: utf-8; mode: snippet -*-
+# name: debug log
+# key: du
+# --
+dbg!(${1:symbol});

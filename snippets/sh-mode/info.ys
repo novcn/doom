@@ -1,0 +1,7 @@
+# -*- mode: snippet -*-
+# name: info
+# key: info
+# --
+info() {
+  echo -e " \\033[96m--> \\033[97m$*\\033[39m"
+}

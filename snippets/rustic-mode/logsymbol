@@ -1,0 +1,5 @@
+# -*- coding: utf-8; mode: snippet -*-
+# name: logsymbol
+# key: lo
+# --
+println!("${1:symbol}={:?}", ${1:$(yas/substr yas-text "[=:, ]*\\\\([^=:, ]*\\\\)" 1)});

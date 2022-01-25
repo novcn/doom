@@ -1,0 +1,53 @@
+# -*- mode: snippet -*-
+# name: template
+# key: template
+# --
+dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+VERBOSE=0
+
+info() {
+  echo -e " \\033[96m--> \\033[97m$*\\033[39m"
+}
+
+trace() {
+  [[ "$VERBOSE" == "1" ]] && {
+    echo -e "\033[93mtrace: \033[97m$*\033[39m"
+  }
+}
+
+die() {
+  [ "$1" ] && {
+    echo "$1" 2>&1
+    exit 1
+  }
+  cat > /dev/stdout <<EOF
+$(basename "${0}") [ options ]
+
+  options:
+Author: Colin Gabrielson
+EOF
+}
+
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -h|--help)
+      die
+      ;;
+    -v|--verbose)
+      VERBOSE="1"
+      break
+      ;;
+    *)
+      die "Invalid argument: $1"
+      ;;
+  esac
+  shift
+done
+
+
+main() {
+
+}
+
+main
