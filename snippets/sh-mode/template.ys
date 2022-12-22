@@ -2,7 +2,11 @@
 # name: template
 # key: template
 # --
-dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+set -o errexit
+set -o nounset
+set -o pipefail
+
+dir="$( cd "$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"
 
 VERBOSE=0
 
@@ -12,17 +16,17 @@ info() {
 
 trace() {
   [[ "$VERBOSE" == "1" ]] && {
-    echo -e "\033[93mtrace: \033[97m$*\033[39m"
+    set -o xtrace
   }
 }
 
 die() {
-  [ "$1" ] && {
-    echo "$1" 2>&1
+  [ "\$1" ] && {
+    echo "\$1" 2>&1
     exit 1
   }
   cat > /dev/stdout <<EOF
-$(basename "${0}") [ options ]
+$(basename "\${0}") [ options ]
 
   options:
 Author: Colin Gabrielson
@@ -30,7 +34,7 @@ EOF
 }
 
 while [[ "$#" -gt 0 ]]; do
-  case "$1" in
+  case "\$1" in
     -h|--help)
       die
       ;;
@@ -39,14 +43,17 @@ while [[ "$#" -gt 0 ]]; do
       break
       ;;
     *)
-      die "Invalid argument: $1"
+      die "Invalid argument: \$1"
       ;;
   esac
   shift
 done
 
+# Implement main functions here
+
 
 main() {
+  # Implement main logic here
 
 }
 

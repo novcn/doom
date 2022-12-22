@@ -5,8 +5,13 @@
 ;;
 (setq user-full-name "Colin Gabrielson"
       user-mail-address "colin.gabrielson@gmail.com"
-      ispell-dictionary "english"
-      doom-theme 'doom-palenight)
+      ispell-dictionary "english")
+      ;;doom-theme 'doom-palenight)
+
+;; Change theme based on if in terminal or gui
+(if (display-graphic-p)
+    (setq doom-theme 'doom-palenight)
+  (setq doom-theme 'doom-laserwave))
 
 ;;
 ;; Indentation
@@ -14,7 +19,7 @@
 (setq tab-width 2)
 (setq standard-indent 2
       js-indent-level standard-indent
-      rustic-indent-offset standard-indent
+      rust-indent-offset standard-indent
       sh-basic-offset standard-indent)
 (setq-default indent-tabs-mode nil
               tab-width standard-indent)
@@ -50,30 +55,70 @@
       evil-insert-state-cursor  'hbar
       which-key-idle-delay 0.01)
 
+;; The maximum displayed length of the branch name of version control.
+(setq doom-modeline-vcs-max-length 24)
+;; Whether display the modal state icon.
+(setq doom-modeline-modal-icon nil)
+(setq doom-modeline-env-enable-rust t)
+;; This should fix branch reflection however might cause perf issues
+(setq auto-revert-check-vc-info t)
+;; Auto refresh buffers to what is changed on disk. This should help with syncthing and org agenda
+(global-auto-revert-mode t)
+
+
 ;;
 ;; Rust settings
 ;;
 (after! rustic
-  (setq rustic-indent-offset standard-indent)
   (setq rustic-format-trigger 'on-compile))
 
 (add-hook 'rustic-mode-hook
           (lambda () (setq indent-tabs-mode nil)))
 
+;;
+;; Magit
+;;
+(after! magit
+  (setq git-commit-summary-max-length 100)
+)
+
 ;; LSP shit might change this if I switch back to eglot
-;; Warning: This seems slower plus I couldn't get go-to completion to work. Ran into a lot of errors,
+;; Warning: Elgot seems slower plus I couldn't get go-to completion to work. Ran into a lot of errors,
 ;; some related to clippy (need to remove -Z from the rustic-flychec-clippy-params variable) Ran into errors with racer.
 ;; Overall lsp over eglot gave me a better experience.
 (after! lsp-mode
   (setq lsp-ui-doc-position 'top)
   (setq lsp-rust-clippy-preference "on")
   (setq lsp-rust-cfg-test t)
+  (setq lsp-rust-analyzer-diagnostics-enable-experimental nil)
   (setq lsp-rust-build-on-save t))
 
-(add-hook 'rust-mode-hook (lambda ()
-                            (lsp-activate-if-already-activated 'rust-analyzer)))
+;; For some rust projects, like the engine, compiling them with the default features will cause
+;; rust-analyzer to complain with many errors due to functions only compiled with the `test`
+;; feature flag. This causes a lot of noise to sift through to find real compile errors.
+;; This function allows these projects to be configured with lsp features such that these errors don't occur.
+(defun novcn/set-rust-project-features ()
+  "Set the configured lsp features for the current rust project."
+  (setq lsp-rust-features-before lsp-rust-features)
+  (defvar local-repo)
+  (setq local-repo (shell-command-to-string "basename $(git rev-parse --show-toplevel) | tr -d '\n'"))
+  (pcase local-repo
+    ("engine-rs" (setq lsp-rust-features ["test"]))
+    ;; Can configure any other repos that should use rust-analyzer with other than default features.
+    ;; default
+    (default (setq lsp-rust-features [])))
+  ;; Errors occur without a short sleep
+  (sleep-for 1)
+  ;; Check to see if we're in an enabled lsp workspace and if our features are different than before
+  (if (and (fboundp 'lsp-restart-workspace) (not (eq lsp-rust-features-before lsp-rust-features)))
+      (lsp-restart-workspace)))
+
+;; Hook this into every project switch
+(add-hook 'projectile-after-switch-project-hook 'novcn/set-rust-project-features)
 
 (add-hook! rustic-mode (set-fill-column 100))
+;;(add-hook 'rust-mode-hook (lambda ()
+;;                            (lsp-activate-if-already-activated 'rust-analyzer)))
 
 ;;
 ;; Binding Overrides
@@ -97,14 +142,22 @@
 ;;
 ;; Parens
 ;;
+;;(after! smartparens
+;;  (smartparens-global-mode -1))
+
 (after! smartparens
-  (smartparens-global-mode -1))
+    (let ((unless-list '(sp-point-before-word-p
+                         sp-point-after-word-p
+                         sp-point-before-same-p)))
+      (sp-pair "`" nil :unless unless-list)))
 
 ;;
 ;; Org mode settings
 ;; This is why we are here. This is why you even write elisp.
 ;;
 (setq novcn/org-agenda-directory (file-truename "~/org"))
+
+
 
 (after! org
   (setq org-export-backends (quote (md confluence ascii html latex)))
@@ -124,9 +177,18 @@
   ;;(setq org-journal-enable-encryption t)
   (setq org-journal-enable-agenda-integration t)
 
+  ;; Attempt to no longer try to decrypt all journal files simply when a date is chosen
+  (remove-hook 'calendar-today-visible-hook 'org-journal-mark-entries)
+  (remove-hook 'calendar-today-invisible-hook 'org-journal-mark-entries)
+
+  ;; Disable exporting with Table of Contents
+  (setq org-export-with-toc nil)
+
   ;; Org agenda settings
   (setq org-extend-today-until 4)
   (setq org-pomodoro-play-sounds nil)
+  (setq org-pomodoro-short-break-length 2)
+  (setq org-pomodoro-long-break-frequency 3)
   (setq org-deadline-warning-days 7)
   ;; set faces to error when the deadline has passed
   (setq org-agenda-deadline-faces
@@ -172,6 +234,11 @@
                 ("CANCELLED" :foreground "DeepSkyBlue4" :weight bold)))))
 
 ;;
+;; Run org agenda after start-up
+;;
+(add-hook 'after-init-hook 'org-agenda-list)
+
+;;
 ;; Org agenda mode settings
 ;;
 (after! org-agenda
@@ -189,7 +256,7 @@
   (map!
       :map org-agenda-mode-map
       :localleader
-      "s" #'org-save-all-org-buffers)
+      "s" 'org-save-all-org-buffers)
 
   ;; After agenda reload agenda-files variable for any new entries
   (setq agendaSkipDirs
@@ -231,3 +298,4 @@
 (setq projectile-project-search-path '("~/src/rust/" "~/src/node" "~/src/infra" "~/prj"))
 
 (add-hook 'sh-mode-hook (lambda () (sh-electric-here-document-mode -1)))
+

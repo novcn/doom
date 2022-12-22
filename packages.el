@@ -1,8 +1,11 @@
-;; Enables loading a theme based on the Xresources colors
-(package! xresources-theme)
-
 ;; Souped up org agenda
 (package! org-super-agenda)
 
-;; distraction free writing
+;; Distraction free writing
 (package! olivetti)
+
+;; Required for catpuccin
+(package! autothemer)
+
+(package! catppuccin
+  :recipe (:host github :repo "catppuccin/emacs"))
