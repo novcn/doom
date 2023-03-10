@@ -34,6 +34,26 @@
 (add-hook! 'doom-load-theme-hook :append
            (doom/reload-font))
 
+
+;;(add-hook 'org-mode-hook 'variable-pitch-mode)
+;;  (add-hook 'org-mode-hook 'visual-line-mode)
+
+(custom-theme-set-faces
+ 'user
+ '(org-block ((t (:inherit fixed-pitch))))
+ '(org-code ((t (:inherit (shadow fixed-pitch)))))
+ '(org-document-info ((t (:foreground "dark orange"))))
+ '(org-document-info-keyword ((t (:inherit (shadow fixed-pitch)))))
+ '(org-indent ((t (:inherit (org-hide fixed-pitch)))))
+ '(org-link ((t (:foreground "royal blue" :underline t))))
+ '(org-meta-line ((t (:inherit (font-lock-comment-face fixed-pitch)))))
+ '(org-property-value ((t (:inherit fixed-pitch))) t)
+ '(org-special-keyword ((t (:inherit (font-lock-comment-face fixed-pitch)))))
+ '(org-table ((t (:inherit fixed-pitch :foreground "#83a598"))))
+ '(org-tag ((t (:inherit (shadow fixed-pitch) :weight bold :height 0.8))))
+ '(org-verbatim ((t (:inherit (shadow fixed-pitch))))))
+
+
 ;;
 ;; Browser
 ;;
@@ -157,11 +177,56 @@
 ;;
 (setq novcn/org-agenda-directory (file-truename "~/org"))
 
+(use-package org-bullets
+  :config
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
 
+
+;;(when window-system
+;;  (let* ((variable-tuple
+;;          (cond ((x-list-fonts   "ETBembo")         '(:font   "ETBembo"))
+;;                ((x-list-fonts   "Source Sans Pro") '(:font   "Source Sans Pro"))
+;;                ((x-list-fonts   "Lucida Grande")   '(:font   "Lucida Grande"))
+;;                ((x-list-fonts   "Verdana")         '(:font   "Verdana"))
+;;                ((x-family-fonts "Sans Serif")      '(:family "Sans Serif"))
+;;                (nil (warn "Cannot find a Sans Serif Font."))))
+;;         (base-font-color (face-foreground 'default nil 'default))
+;;         (headline `(:inherit default :weight bold
+;;                     :foreground ,base-font-color)))
+;;  
+;;    (custom-theme-set-faces
+;;     'user
+;;     `(org-level-8        ((t (,@headline ,@variable-tuple))))
+;;     `(org-level-7        ((t (,@headline ,@variable-tuple))))
+;;     `(org-level-6        ((t (,@headline ,@variable-tuple))))
+;;     `(org-level-5        ((t (,@headline ,@variable-tuple))))
+;;     `(org-level-4        ((t (,@headline ,@variable-tuple :height 1.1))))
+;;     `(org-level-3        ((t (,@headline ,@variable-tuple :height 1.25))))
+;;     `(org-level-2        ((t (,@headline ,@variable-tuple :height 1.5))))
+;;     `(org-level-1        ((t (,@headline ,@variable-tuple :height 1.75))))
+;;     `(org-headline-done  ((t (,@headline ,@variable-tuple :strike-through t))))
+;;     `(org-document-title ((t (,@headline ,@variable-tuple
+;;                                          :height 2.0 :underline nil)))))))
 
 (after! org
-  (setq org-export-backends (quote (md confluence ascii html latex)))
-  (require 'ox-confluence)
+  (setq org-export-backends (quote (md  ascii html latex)))
+
+  (setq org-pomodoro-finished-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
+  (setq org-pomodoro-short-break-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
+  (setq org-pomodoro-long-break-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
+  (setq org-pomodoro-start-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
+
+  ;; Beautify
+  (setq org-hide-emphasis-markers t)
+
+  (custom-theme-set-faces
+   'user
+   '(variable-pitch ((t (:family "ETBembo" :height 180 :weight thin))))
+   '(fixed-pitch ((t ( :family "Fira Code Retina" :height 160)))))
+  
+    (font-lock-add-keywords 'org-mode
+                            '(("^ *\\([-]\\) "
+                               (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
 
   ;; Org General settings
   (setq org-directory "~/org/")
@@ -186,9 +251,6 @@
 
   ;; Org agenda settings
   (setq org-extend-today-until 4)
-  (setq org-pomodoro-play-sounds nil)
-  (setq org-pomodoro-short-break-length 2)
-  (setq org-pomodoro-long-break-frequency 3)
   (setq org-deadline-warning-days 7)
   ;; set faces to error when the deadline has passed
   (setq org-agenda-deadline-faces
@@ -236,7 +298,7 @@
 ;;
 ;; Run org agenda after start-up
 ;;
-(add-hook 'after-init-hook 'org-agenda-list)
+;; (add-hook 'after-init-hook 'org-agenda-list)
 
 ;;
 ;; Org agenda mode settings
