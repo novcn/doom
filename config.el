@@ -6,12 +6,12 @@
 (setq user-full-name "Colin Gabrielson"
       user-mail-address "colin.gabrielson@gmail.com"
       ispell-dictionary "english")
-      ;;doom-theme 'doom-palenight)
+      ;;doom-theme 'doom-gruvbox)
 
 ;; Change theme based on if in terminal or gui
 (if (display-graphic-p)
-    (setq doom-theme 'doom-palenight)
-  (setq doom-theme 'doom-laserwave))
+    (setq doom-theme 'doom-gruvbox)
+  (setq doom-theme 'doom-gruvbox))
 
 ;;
 ;; Indentation
@@ -263,25 +263,37 @@
         (0.5 . org-upcoming-deadline)
         (0.0 . org-upcoming-distant-deadline)))
 
-  ;; Org Capture templates
   (setq org-capture-templates
-  '(("c" "Capture" entry (file "capture.org")
-     "* TODO %?")
-    ("t" "Task" entry (file "tasks.org")
-     "* TODO %?")
-    ("n" "Note" entry (file "notes.org")
-     "* %?")
-    ("l" "Listen" entry (file "listen.org")
-     "* %?")
-    ("w" "Watch" entry (file "watch.org")
-     "* %?")
-    ("m" "Meeting" entry (file "meetings.org")
-     "* TODO %?")
-    ("r" "Remember" entry (file "memory.org")
-     "* TODO %?")
-    ("R" "Read" entry (file "read.org")
-     "* TODO %?"
-     :immediate-finish t)))
+      `(("i" "Inbox" entry  (file "inbox.org")
+         ,(concat "* TODO %?\n"
+                  "/Entered on/ %U"))
+        ("s" "Slipbox" entry  (file "braindump/org/inbox.org")
+         "* %?\n")))
+
+  (defun novcn/org-capture-inbox ()
+    (interactive)
+    (org-capture nil "i"))
+
+  (defun novcn/org-capture-slipbox ()
+    (interactive)
+    (org-capture nil "s"))
+
+  (defun novcn/org-agenda ()
+    (interactive)
+    (org-agenda nil " "))
+
+  (bind-key "C-c <tab>" #'novcn/org-capture-inbox)
+  (bind-key "C-c SPC" #'novcn/org-agenda)
+
+  (defun novcn/org-inbox-capture ()
+    (interactive)
+    "Capture a task in agenda mode."
+    (org-capture nil "i"))
+
+  (map! :map org-agenda-mode-map
+        "i" #'org-agenda-clock-in
+        "R" #'org-agenda-refile
+        "c" #'novcn/org-inbox-capture)
 
   ;; Org keywords
   (setq org-todo-keywords
