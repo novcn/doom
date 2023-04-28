@@ -211,6 +211,10 @@
 (after! org
   (setq org-export-backends (quote (md  ascii html latex)))
 
+  (setq org-pomodoro-length 45) ;; 45 minute pomodoros. Caters more towards ultradian rhythm
+  (setq org-pomodoro-long-break-frequency 2) ;; Long break every 2 pomodoros
+  (setq org-pomodoro-short-break-length 5)
+  (setq org-pomodoro-long-break-length 15)
   (setq org-pomodoro-finished-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
   (setq org-pomodoro-short-break-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
   (setq org-pomodoro-long-break-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
