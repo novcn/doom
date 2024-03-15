@@ -4,10 +4,16 @@
 ;; Distraction free writing
 (package! olivetti)
 
+(package! org-modern)
+
 ;; Required for catpuccin
 (package! autothemer)
 
-(package! org-bullets)
+;; Kubernetes support
+(package! kubernetes)
+(package! kubernetes-evil)
 
 (package! catppuccin
   :recipe (:host github :repo "catppuccin/emacs"))
+
+(package! exec-path-from-shell)

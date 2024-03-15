@@ -6,7 +6,6 @@
 (setq user-full-name "Colin Gabrielson"
       user-mail-address "colin.gabrielson@gmail.com"
       ispell-dictionary "english")
-      ;;doom-theme 'doom-gruvbox)
 
 ;; Change theme based on if in terminal or gui
 (if (display-graphic-p)
@@ -35,8 +34,7 @@
            (doom/reload-font))
 
 
-;;(add-hook 'org-mode-hook 'variable-pitch-mode)
-;;  (add-hook 'org-mode-hook 'visual-line-mode)
+(require 'json)
 
 (custom-theme-set-faces
  'user
@@ -85,6 +83,22 @@
 ;; Auto refresh buffers to what is changed on disk. This should help with syncthing and org agenda
 (global-auto-revert-mode t)
 
+;;
+;; For commit signing passphrase caching and finding other programs
+;;
+(require 'exec-path-from-shell)
+
+(with-eval-after-load 'exec-path-from-shell
+  (dolist (var '("SSH_AUTH_SOCK" "SSH_AGENT_PID" "GPG_AGENT_INFO" "LANG" "LC_CTYPE"))
+    (add-to-list 'exec-path-from-shell-variables var)))
+
+(when (or (memq window-system '(mac ns x pgtk))
+          (unless (memq system-type '(ms-dos windows-nt))
+            (daemonp)))
+  (exec-path-from-shell-initialize))
+
+(provide 'init-exec-path)
+
 
 ;;
 ;; Rust settings
@@ -102,43 +116,34 @@
   (setq git-commit-summary-max-length 100)
 )
 
-;; LSP shit might change this if I switch back to eglot
-;; Warning: Elgot seems slower plus I couldn't get go-to completion to work. Ran into a lot of errors,
-;; some related to clippy (need to remove -Z from the rustic-flychec-clippy-params variable) Ran into errors with racer.
-;; Overall lsp over eglot gave me a better experience.
-(after! lsp-mode
-  (setq lsp-ui-doc-position 'top)
-  (setq lsp-rust-clippy-preference "on")
-  (setq lsp-rust-cfg-test t)
-  (setq lsp-rust-analyzer-diagnostics-enable-experimental nil)
-  (setq lsp-rust-build-on-save t))
-
-;; For some rust projects, like the engine, compiling them with the default features will cause
-;; rust-analyzer to complain with many errors due to functions only compiled with the `test`
-;; feature flag. This causes a lot of noise to sift through to find real compile errors.
-;; This function allows these projects to be configured with lsp features such that these errors don't occur.
-(defun novcn/set-rust-project-features ()
-  "Set the configured lsp features for the current rust project."
-  (setq lsp-rust-features-before lsp-rust-features)
-  (defvar local-repo)
-  (setq local-repo (shell-command-to-string "basename $(git rev-parse --show-toplevel) | tr -d '\n'"))
-  (pcase local-repo
-    ("engine-rs" (setq lsp-rust-features ["test"]))
-    ;; Can configure any other repos that should use rust-analyzer with other than default features.
-    ;; default
-    (default (setq lsp-rust-features [])))
-  ;; Errors occur without a short sleep
-  (sleep-for 1)
-  ;; Check to see if we're in an enabled lsp workspace and if our features are different than before
-  (if (and (fboundp 'lsp-restart-workspace) (not (eq lsp-rust-features-before lsp-rust-features)))
-      (lsp-restart-workspace)))
-
-;; Hook this into every project switch
-(add-hook 'projectile-after-switch-project-hook 'novcn/set-rust-project-features)
-
-(add-hook! rustic-mode (set-fill-column 100))
+;;;; For some rust projects, like the engine, compiling them with the default features will cause
+;;;; rust-analyzer to complain with many errors due to functions only compiled with the `test`
+;;;; feature flag. This causes a lot of noise to sift through to find real compile errors.
+;;;; This function allows these projects to be configured with lsp features such that these errors don't occur.
+;;(defun novcn/set-rust-project-features ()
+;;  "Set the configured lsp features for the current rust project."
+;;  (setq lsp-rust-features-before lsp-rust-features)
+;;  (defvar local-repo)
+;;  (setq local-repo (shell-command-to-string "basename $(git rev-parse --show-toplevel) | tr -d '\n'"))
+;;  (pcase local-repo
+;;    ("engine-rs" (setq lsp-rust-features ["test"]))
+;;    ;; Can configure any other repos that should use rust-analyzer with other than default features.
+;;    ;; default
+;;    (default (setq lsp-rust-features [])))
+;;  ;; Errors occur without a short sleep
+;;  (sleep-for 1)
+;;  ;; Check to see if we're in an enabled lsp workspace and if our features are different than before
+;;  (if (and (fboundp 'lsp-restart-workspace) (not (eq lsp-rust-features-before lsp-rust-features)))
+;;      (lsp-restart-workspace)))
+;;
+;;;; Hook this into every project switch
+;;(add-hook 'projectile-after-switch-project-hook 'novcn/set-rust-project-features)
+;;
+;;(add-hook! rustic-mode (set-fill-column 100))
 ;;(add-hook 'rust-mode-hook (lambda ()
 ;;                            (lsp-activate-if-already-activated 'rust-analyzer)))
+
+(setq treemacs-no-delete-other-windows nil)
 
 ;;
 ;; Binding Overrides
@@ -172,49 +177,36 @@
       (sp-pair "`" nil :unless unless-list)))
 
 ;;
+;; Configure evil surround to no longer add a space between word and parens
+;;
+(after! evil-surround
+  (push '(?w . ("(" . ")")) evil-surround-pairs-alist))
+
+;;
 ;; Org mode settings
 ;; This is why we are here. This is why you even write elisp.
 ;;
 (setq novcn/org-agenda-directory (file-truename "~/org"))
 
-(use-package org-bullets
-  :config
-  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1))))
+;; Save whatever's in the system clipboard before
+;; replacing it with Emacs's text.
+(setq save-interprogram-paste-before-kill t)
 
-
-;;(when window-system
-;;  (let* ((variable-tuple
-;;          (cond ((x-list-fonts   "ETBembo")         '(:font   "ETBembo"))
-;;                ((x-list-fonts   "Source Sans Pro") '(:font   "Source Sans Pro"))
-;;                ((x-list-fonts   "Lucida Grande")   '(:font   "Lucida Grande"))
-;;                ((x-list-fonts   "Verdana")         '(:font   "Verdana"))
-;;                ((x-family-fonts "Sans Serif")      '(:family "Sans Serif"))
-;;                (nil (warn "Cannot find a Sans Serif Font."))))
-;;         (base-font-color (face-foreground 'default nil 'default))
-;;         (headline `(:inherit default :weight bold
-;;                     :foreground ,base-font-color)))
-;;  
-;;    (custom-theme-set-faces
-;;     'user
-;;     `(org-level-8        ((t (,@headline ,@variable-tuple))))
-;;     `(org-level-7        ((t (,@headline ,@variable-tuple))))
-;;     `(org-level-6        ((t (,@headline ,@variable-tuple))))
-;;     `(org-level-5        ((t (,@headline ,@variable-tuple))))
-;;     `(org-level-4        ((t (,@headline ,@variable-tuple :height 1.1))))
-;;     `(org-level-3        ((t (,@headline ,@variable-tuple :height 1.25))))
-;;     `(org-level-2        ((t (,@headline ,@variable-tuple :height 1.5))))
-;;     `(org-level-1        ((t (,@headline ,@variable-tuple :height 1.75))))
-;;     `(org-headline-done  ((t (,@headline ,@variable-tuple :strike-through t))))
-;;     `(org-document-title ((t (,@headline ,@variable-tuple
-;;                                          :height 2.0 :underline nil)))))))
+;; Custom faces for markdown headers
+(custom-set-faces!
+'(markdown-header-delimiter-face :foreground "#616161" :height 0.9)
+'(markdown-header-face-1 :height 1.8 :foreground "#A3BE8C" :weight extra-bold :inherit markdown-header-face)
+'(markdown-header-face-2 :height 1.4 :foreground "#EBCB8B" :weight extra-bold :inherit markdown-header-face)
+'(markdown-header-face-3 :height 1.2 :foreground "#D08770" :weight extra-bold :inherit markdown-header-face)
+'(markdown-header-face-4 :height 1.15 :foreground "#BF616A" :weight bold :inherit markdown-header-face)
+'(markdown-header-face-5 :height 1.1 :foreground "#b48ead" :weight bold :inherit markdown-header-face)
+'(markdown-header-face-6 :height 1.05 :foreground "#5e81ac" :weight semi-bold :inherit markdown-header-face))
 
 (after! org
+  (customize-set-variable 'org-blank-before-new-entry'((heading . nil)(plain-list-item . nil)))(setq org-cycle-separator-lines 1)
   (setq org-export-backends (quote (md  ascii html latex)))
 
-  (setq org-pomodoro-length 45) ;; 45 minute pomodoros. Caters more towards ultradian rhythm
-  (setq org-pomodoro-long-break-frequency 2) ;; Long break every 2 pomodoros
-  (setq org-pomodoro-short-break-length 5)
-  (setq org-pomodoro-long-break-length 15)
+  ;; Ultradian cycle pomodoros. Disabled for now
   (setq org-pomodoro-finished-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
   (setq org-pomodoro-short-break-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
   (setq org-pomodoro-long-break-sound "/home/novcn/dot/media/cp77_dial_tone.mp3")
@@ -223,27 +215,34 @@
   ;; Beautify
   (setq org-hide-emphasis-markers t)
 
-  (custom-theme-set-faces
-   'user
-   '(variable-pitch ((t (:family "ETBembo" :height 180 :weight thin))))
-   '(fixed-pitch ((t ( :family "Fira Code Retina" :height 160)))))
-  
-    (font-lock-add-keywords 'org-mode
-                            '(("^ *\\([-]\\) "
-                               (0 (prog1 () (compose-region (match-beginning 1) (match-end 1) "•"))))))
-
   ;; Org General settings
   (setq org-directory "~/org/")
   (setq org-ellipsis " ▼ ") ;; just to be fancy
-  (setq org-archive-location "~/org/archive/")
+
+  ;; These are to speed up agenda https://orgmode.org/manual/Speeding-Up-Your-Agendas.html
+  (setq org-agenda-dim-blocked-tasks nil)
+  (setq org-agenda-use-tag-inheritance nil)
+  (setq org-agenda-ignore-properties '(effort appt stats category))
+
+;;
+;;
+
+      ;;'(())
+
+  (setq org-archive-location "~/org/archive/%s::datetree/* Archived tasks")
+
+  (defun novcn/org-archive-done-tasks ()
+    "Archive all done tasks."
+    (interactive)
+    (org-map-entries 'org-archive-subtree "/DONE" 'file)
+    (org-map-entries 'org-archive-subtree "/CANCELED" 'file)
+    (org-map-entries 'org-archive-subtree "/FAILED" 'file))
 
   ;; Org journal settings
   (setq org-journal-file-type 'monthly)
   (setq org-journal-file-format "%Y-%m.org")
   (setq org-journal-date-format "%A, %m-%d-%Y")
-  (setq org-journal-encrypt-journal t)
   ;; This will encrypt specific entries which isn't ideal. We want to encrypt the whole thing
-  ;;(setq org-journal-enable-encryption t)
   (setq org-journal-enable-agenda-integration t)
 
   ;; Attempt to no longer try to decrypt all journal files simply when a date is chosen
@@ -285,11 +284,6 @@
   (bind-key "C-c <tab>" #'novcn/org-capture-inbox)
   (bind-key "C-c SPC" #'novcn/org-agenda)
 
-  (defun novcn/org-inbox-capture ()
-    (interactive)
-    "Capture a task in agenda mode."
-    (org-capture nil "i"))
-
   (map! :map org-agenda-mode-map
         "i" #'org-agenda-clock-in
         "R" #'org-agenda-refile
@@ -298,7 +292,7 @@
   ;; Org keywords
   (setq org-todo-keywords
         (quote ((sequence "TODO(t)" "TRIAGE(g)" "UNDERWAY(u)" "|" "DONE(d)" "FAILED(f)")
-                (sequence "WAIT(w@/!)" "REVIEW(r@/!)" "|" "CANCELLED(c@/!)" "MEETING"))))
+                (sequence "WAIT(w)" "REVIEW(r)" "|" "CANCELLED(c@/!)" "MEETING"))))
 
   ;; Org keyword faces
   (setq org-todo-keyword-faces
@@ -311,11 +305,11 @@
                 ("REVIEW" :foreground "chartreuse3" :weight bold)
                 ("CANCELLED" :foreground "DeepSkyBlue4" :weight bold)))))
 
-;;
-;; Run org agenda after start-up
-;;
-;; (add-hook 'after-init-hook 'org-agenda-list)
+(defun my/org-insert-heading-newline ()
+  "Add an extra newline before a new org heading."
+  (org-return))
 
+(advice-add 'org-insert-heading :after 'my/org-insert-heading-newline)
 ;;
 ;; Org agenda mode settings
 ;;
@@ -343,6 +337,7 @@
          "/home/novcn/org/.stversions"
          "/home/novcn/org/.undodir"
          ])
+
   (add-hook 'org-agenda-mode-hook
             (lambda ()
               (setq org-agenda-files
@@ -351,7 +346,7 @@
                        (not (seq-some
                              (lambda (x) (string-match x path))
                              agendaSkipDirs )))
-                     (directory-files-recursively "/home/novcn/org" "\.org$")))))
+                     (directory-files-recursively "/home/novcn/org/issues" "\.org$")))))
 
   ;;
   ;; Org super-agenda settings
@@ -372,6 +367,17 @@
                             :todo "TODAY"
                             :scheduled today
                             :order 1))))))))))
+
+
+  (setq org-agenda-custom-commands
+      '(
+        (" " "Jira issues" agenda "Jira issues assigned to me"
+         ((org-agenda-files '("~/org/issues"))))
+        (" " "Inbox" agenda "To Refile"
+         ((org-agenda-files '("~/org/inbox.org"))))
+       )
+      )
+
 
 (setq projectile-project-search-path '("~/src/rust/" "~/src/node" "~/src/infra" "~/prj"))
 
