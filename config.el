@@ -50,6 +50,7 @@
 (setq tab-width 2)
 (setq standard-indent 2
       js-indent-level standard-indent
+      typescript-indent-level standard-indent
       rust-indent-offset standard-indent
       sh-basic-offset standard-indent)
 (setq-default indent-tabs-mode nil
